@@ -1,0 +1,97 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f6f8fb;
+}
+
+.subtle-gradient {
+    background: radial-gradient(120% 120% at 10% 20%, #f0f6ff 0, #f6f8fb 42%, #eef2ff 100%);
+}
+
+.navbar-brand {
+    letter-spacing: 0.5px;
+}
+
+.table thead.sticky-top {
+    top: 0;
+    z-index: 1;
+}
+
+.card {
+    border-radius: 12px;
+    transition: all 0.25s ease;
+}
+
+.card.card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(46, 91, 255, 0.15);
+}
+
+.btn {
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.btn.btn-raise:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.soft-shadow {
+    box-shadow: 0 4px 20px rgba(12, 61, 223, 0.08);
+}
+
+.soft-shadow-sm {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.page-shell {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+body.page-loaded .page-shell {
+    opacity: 1;
+    transform: none;
+}
+
+.table-hover tbody tr {
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f0f6ff;
+}
+
+.flash-highlight {
+    animation: flashBg 1.4s ease;
+}
+
+@keyframes flashBg {
+    0% { background-color: #dceafe; }
+    50% { background-color: #f6f8fb; }
+    100% { background-color: transparent; }
+}
+
+.toast-container {
+    z-index: 1060;
+}
+
+#nav-clock {
+    font-variant-numeric: tabular-nums;
+}
+
+.fade-in {
+    animation: fadeInUp 0.35s ease;
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    100% {
+        opacity: 1;
+        transform: none;
+    }
+}
