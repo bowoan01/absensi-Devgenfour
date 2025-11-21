@@ -186,7 +186,7 @@ class StudentController extends Controller
             'email' => 'Email',
             'username' => 'Username',
             'password' => 'Kata sandi',
-            'student_id_code' => 'Kode peserta',
+            'student_id_code' => 'NIM',
             'department' => 'Departemen/jurusan',
             'start_date' => 'Tanggal mulai',
             'end_date' => 'Tanggal selesai',

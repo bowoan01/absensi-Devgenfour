@@ -12,7 +12,7 @@
     <div class="card-body">
         <form id="filter-form" class="row g-2">
             <div class="col-md-4">
-                <input type="text" name="search" class="form-control" placeholder="Cari nama, kode peserta, atau jurusan">
+                <input type="text" name="search" class="form-control" placeholder="Cari nama, NIM, atau jurusan">
             </div>
             <div class="col-md-3">
                 <select name="status" class="form-select">
@@ -63,7 +63,7 @@
                             <input type="password" name="password" class="form-control" placeholder="Wajib untuk akun baru. Saat mengedit bisa dikosongkan.">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Kode Peserta</label>
+                            <label class="form-label">NIM</label>
                             <input type="text" name="student_id_code" class="form-control" required placeholder="Contoh: INT-001">
                         </div>
                         <div class="col-md-4">

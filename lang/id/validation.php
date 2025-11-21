@@ -51,7 +51,7 @@ return [
         'full_name' => 'Nama lengkap',
         'email' => 'Email',
         'username' => 'Username',
-        'student_id_code' => 'Kode peserta',
+        'student_id_code' => 'NIM',
         'department' => 'Departemen',
         'start_date' => 'Tanggal mulai',
         'end_date' => 'Tanggal selesai',

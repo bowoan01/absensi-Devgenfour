@@ -2,7 +2,7 @@
     <thead class="table-light sticky-top">
         <tr>
             <th>Nama</th>
-            <th>Kode Peserta</th>
+            <th>NIM</th>
             <th>Departemen</th>
             <th>Mulai</th>
             <th>Selesai</th>
