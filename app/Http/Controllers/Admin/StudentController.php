@@ -76,7 +76,7 @@ class StudentController extends Controller
             ]);
         });
 
-        Log::info('Student created', ['user' => auth()->id(), 'student' => $data['student_id_code']]);
+        // Log::info('Student created', ['user' => auth()->id(), 'student' => $data['student_id_code']]);
 
         $students = Student::with('user')->orderBy('full_name')->paginate(10);
         return response()->json([
@@ -124,7 +124,7 @@ class StudentController extends Controller
             ]);
         });
 
-        Log::info('Student updated', ['user' => auth()->id(), 'student' => $student->id]);
+        // Log::info('Student updated', ['user' => auth()->id(), 'student' => $student->id]);
 
         $students = Student::with('user')->orderBy('full_name')->paginate(10);
         return response()->json([
@@ -140,7 +140,7 @@ class StudentController extends Controller
             $student->delete();
         });
 
-        Log::info('Student deleted', ['user' => auth()->id(), 'student' => $student->id]);
+        // Log::info('Student deleted', ['user' => auth()->id(), 'student' => $student->id]);
 
         $students = Student::with('user')->orderBy('full_name')->paginate(10);
         return response()->json([
@@ -155,7 +155,7 @@ class StudentController extends Controller
         $student->update(['status' => $newStatus]);
         $student->user()->update(['status' => $newStatus]);
 
-        Log::info('Student status toggled', ['user' => auth()->id(), 'student' => $student->id, 'status' => $newStatus]);
+        // Log::info('Student status toggled', ['user' => auth()->id(), 'student' => $student->id, 'status' => $newStatus]);
 
         $students = Student::with('user')->orderBy('full_name')->paginate(10);
         return response()->json([

@@ -86,7 +86,7 @@ class ReportController extends Controller
         $response->headers->set('Content-Type', $fileType === 'xlsx' ? 'application/vnd.ms-excel' : 'text/csv');
         $response->headers->set('Content-Disposition', 'attachment; filename="attendance_' . $student->id . '.' . $ext . '"');
 
-        Log::info('Report exported', ['user' => auth()->id(), 'student' => $student->id]);
+        // Log::info('Report exported', ['user' => auth()->id(), 'student' => $student->id]);
 
         return $response;
     }
@@ -102,11 +102,11 @@ class ReportController extends Controller
 
         $attendance->update($data);
 
-        Log::info('Attendance corrected', [
-            'user' => auth()->id(),
-            'attendance' => $attendance->id,
-            'payload' => $data,
-        ]);
+        // Log::info('Attendance corrected', [
+        //     'user' => auth()->id(),
+        //     'attendance' => $attendance->id,
+        //     'payload' => $data,
+        // ]);
 
         return response()->json([
             'message' => 'Data absensi diperbarui.',
