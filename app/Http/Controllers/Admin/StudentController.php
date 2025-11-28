@@ -9,36 +9,44 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Yajra\DataTables\Facades\DataTables;
 
 class StudentController extends Controller
 {
     public function index(Request $request)
     {
+        return view('admin.students.index');
+    }
+
+    public function datatable(Request $request)
+    {
         $query = Student::with('user')
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = $request->input('search');
-                $q->where(function ($inner) use ($search) {
-                    $inner->where('full_name', 'like', "%{$search}%")
-                        ->orWhere('student_id_code', 'like', "%{$search}%")
-                        ->orWhere('department', 'like', "%{$search}%");
-                });
-            })
-            ->when($request->filled('status'), function ($q) use ($request) {
-                $q->where('status', $request->input('status'));
-            })
-            ->when($request->filled('department'), function ($q) use ($request) {
-                $q->where('department', $request->input('department'));
-            })
-            ->orderBy('full_name');
+            ->when($request->filled('status'), fn($q) => $q->where('status', $request->input('status')))
+            ->when($request->filled('department'), fn($q) => $q->where('department', 'like', '%' . $request->input('department') . '%'));
 
-        $students = $query->paginate(10);
-
-        if ($request->ajax()) {
-            $html = view('partials.students.table', compact('students'))->render();
-            return response()->json(['html' => $html]);
-        }
-
-        return view('admin.students.index', compact('students'));
+        return DataTables::eloquent($query)
+            ->addColumn('nim', fn(Student $student) => e($student->student_id_code))
+            ->addColumn('nama', fn(Student $student) => e($student->full_name))
+            ->addColumn('jurusan', fn(Student $student) => e($student->department))
+            ->addColumn('mulai', fn(Student $student) => $student->start_date ? $student->start_date->locale('id')->translatedFormat('d F Y') : '—')
+            ->addColumn('selesai', fn(Student $student) => $student->end_date ? $student->end_date->locale('id')->translatedFormat('d F Y') : '—')
+            ->addColumn('status_label', function (Student $student) {
+                $label = $student->status === Student::STATUS_ACTIVE ? 'Aktif' : 'Nonaktif';
+                $badge = $student->status === Student::STATUS_ACTIVE ? 'success' : 'secondary';
+                return '<span class="badge bg-' . $badge . '">' . $label . '</span>';
+            })
+            ->addColumn('aksi', function (Student $student) {
+                return '
+                    <div class="d-flex justify-content-end gap-1">
+                        <a href="' . route('reports.show', $student) . '" class="btn btn-outline-primary btn-sm btn-raise">Lihat Laporan</a>
+                        <button type="button" class="btn btn-outline-secondary btn-sm btn-raise edit-student" data-id="' . $student->id . '">Ubah</button>
+                        <button type="button" class="btn btn-outline-warning btn-sm btn-raise toggle-status" data-id="' . $student->id . '">' . ($student->status === Student::STATUS_ACTIVE ? 'Nonaktifkan' : 'Aktifkan') . '</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-raise delete-student" data-id="' . $student->id . '">Hapus</button>
+                    </div>
+                ';
+            })
+            ->rawColumns(['status_label', 'aksi'])
+            ->toJson();
     }
 
     public function store(Request $request)
@@ -47,7 +55,6 @@ class StudentController extends Controller
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'username' => 'nullable|string|max:255|unique:users,username',
-            'password' => 'required|string|min:8',
             'student_id_code' => 'required|string|max:100|unique:students,student_id_code',
             'department' => 'required|string|max:255',
             'start_date' => 'required|date',
@@ -56,11 +63,13 @@ class StudentController extends Controller
         ], $this->validationMessages(), $this->attributeLabels());
 
         DB::transaction(function () use ($data) {
+            $defaultPassword = 'devgen123456';
+
             $user = User::create([
                 'name' => $data['full_name'],
                 'email' => $data['email'],
                 'username' => $data['username'],
-                'password' => Hash::make($data['password']),
+                'password' => Hash::make($defaultPassword),
                 'role' => User::ROLE_STUDENT,
                 'status' => $data['status'],
             ]);
@@ -78,11 +87,7 @@ class StudentController extends Controller
 
         // Log::info('Student created', ['user' => auth()->id(), 'student' => $data['student_id_code']]);
 
-        $students = Student::with('user')->orderBy('full_name')->paginate(10);
-        return response()->json([
-            'message' => 'Mahasiswa berhasil ditambahkan.',
-            'html' => view('partials.students.table', compact('students'))->render(),
-        ]);
+        return response()->json(['message' => 'Mahasiswa berhasil ditambahkan.']);
     }
 
     public function edit(Student $student)
@@ -126,11 +131,7 @@ class StudentController extends Controller
 
         // Log::info('Student updated', ['user' => auth()->id(), 'student' => $student->id]);
 
-        $students = Student::with('user')->orderBy('full_name')->paginate(10);
-        return response()->json([
-            'message' => 'Data mahasiswa berhasil diperbarui.',
-            'html' => view('partials.students.table', compact('students'))->render(),
-        ]);
+        return response()->json(['message' => 'Data mahasiswa berhasil diperbarui.']);
     }
 
     public function destroy(Student $student)
@@ -142,11 +143,7 @@ class StudentController extends Controller
 
         // Log::info('Student deleted', ['user' => auth()->id(), 'student' => $student->id]);
 
-        $students = Student::with('user')->orderBy('full_name')->paginate(10);
-        return response()->json([
-            'message' => 'Mahasiswa berhasil dihapus.',
-            'html' => view('partials.students.table', compact('students'))->render(),
-        ]);
+        return response()->json(['message' => 'Mahasiswa berhasil dihapus.']);
     }
 
     public function toggleStatus(Student $student)
@@ -157,11 +154,7 @@ class StudentController extends Controller
 
         // Log::info('Student status toggled', ['user' => auth()->id(), 'student' => $student->id, 'status' => $newStatus]);
 
-        $students = Student::with('user')->orderBy('full_name')->paginate(10);
-        return response()->json([
-            'message' => 'Status mahasiswa diperbarui.',
-            'html' => view('partials.students.table', compact('students'))->render(),
-        ]);
+        return response()->json(['message' => 'Status mahasiswa diperbarui.']);
     }
 
     protected function validationMessages(): array

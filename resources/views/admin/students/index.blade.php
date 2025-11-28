@@ -30,8 +30,25 @@
         </form>
     </div>
 </div>
-<div id="students-table">
-    @include('partials.students.table', ['students' => $students])
+<div class="card shadow-sm border-0 card-hover">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle w-100" id="students-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>NIM</th>
+                        <th>Nama Mahasiswa</th>
+                        <th>Jurusan</th>
+                        <th>Mulai</th>
+                        <th>Selesai</th>
+                        <th>Status</th>
+                        <th class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
@@ -58,16 +75,12 @@
                             <label class="form-label">Username (opsional)</label>
                             <input type="text" name="username" class="form-control" placeholder="Gunakan jika ingin login dengan username">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Kata Sandi Sementara</label>
-                            <input type="password" name="password" class="form-control" placeholder="Wajib untuk akun baru. Saat mengedit bisa dikosongkan.">
-                        </div>
                         <div class="col-md-4">
                             <label class="form-label">NIM</label>
                             <input type="text" name="student_id_code" class="form-control" required placeholder="Contoh: INT-001">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Departemen/Jurusan</label>
+                            <label class="form-label">Kampus/Jurusan</label>
                             <input type="text" name="department" class="form-control" required>
                         </div>
                         <div class="col-md-4">
@@ -102,6 +115,45 @@
 <script>
 $(function() {
     const modal = new bootstrap.Modal(document.getElementById('studentModal'));
+    const table = $('#students-table').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: true,
+        autoWidth: false,
+        ajax: {
+            url: "{{ route('students.datatable') }}",
+            data: function(d) {
+                d.status = $('#filter-form [name="status"]').val();
+                d.department = $('#filter-form [name="department"]').val();
+            }
+        },
+        dom: "<'row mb-3'<'col-md-6'l><'col-md-6 text-end'>>rt<'row'<'col-md-5'i><'col-md-7'p>>",
+        columns: [
+            { data: 'nim', name: 'student_id_code' },
+            { data: 'nama', name: 'full_name' },
+            { data: 'jurusan', name: 'department' },
+            { data: 'mulai', name: 'start_date' },
+            { data: 'selesai', name: 'end_date' },
+            { data: 'status_label', name: 'status', orderable: false, searchable: false },
+            { data: 'aksi', name: 'aksi', orderable: false, searchable: false, className: 'text-end' },
+        ],
+        order: [[1, 'asc']],
+        language: {
+            processing: "Memuat...",
+            search: "Cari:",
+            lengthMenu: "Tampilkan _MENU_ entri",
+            info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+            infoEmpty: "Tidak ada data tersedia",
+            infoFiltered: "(disaring dari total _MAX_ data)",
+            zeroRecords: "Tidak ditemukan data yang cocok",
+            paginate: {
+                first: "Pertama",
+                last: "Terakhir",
+                next: "Berikutnya",
+                previous: "Sebelumnya"
+            },
+        }
+    });
 
     $('#add-student-btn').on('click', function() {
         $('#student-form')[0].reset();
@@ -112,10 +164,8 @@ $(function() {
 
     $('#filter-form').on('submit', function(e) {
         e.preventDefault();
-        $.get("{{ route('students.index') }}", $(this).serialize(), function(resp) {
-            $('#students-table').html(resp.html);
-            flashElement('#students-table table tbody tr:first-child');
-        });
+        table.search($('#filter-form [name="search"]').val());
+        table.ajax.reload();
     });
 
     $(document).on('click', '.edit-student', function() {
@@ -131,7 +181,6 @@ $(function() {
             $('#student-form [name="status"]').val(data.status);
             $('#student-form [name="start_date"]').val(data.start_date);
             $('#student-form [name="end_date"]').val(data.end_date);
-            $('#student-form [name="password"]').val('');
             modal.show();
         });
     });
@@ -146,9 +195,8 @@ $(function() {
             type: method,
             data: $('#student-form').serialize(),
             success: function(resp) {
-                $('#students-table').html(resp.html);
+                table.ajax.reload(null, false);
                 modal.hide();
-                flashElement('#students-table table tbody tr:first-child');
                 showToast(resp.message, 'success');
             },
             error: function(xhr) {
@@ -166,8 +214,7 @@ $(function() {
             type: 'DELETE',
             data: {_token: $('meta[name="csrf-token"]').attr('content')},
             success: function(resp) {
-                $('#students-table').html(resp.html);
-                flashElement('#students-table table tbody tr:first-child');
+                table.ajax.reload(null, false);
                 showToast(resp.message, 'success');
             }
         });
@@ -180,8 +227,7 @@ $(function() {
             type: 'PATCH',
             data: {_token: $('meta[name="csrf-token"]').attr('content')},
             success: function(resp) {
-                $('#students-table').html(resp.html);
-                flashElement('#students-table table tbody tr:first-child');
+                table.ajax.reload(null, false);
                 showToast(resp.message, 'info');
             }
         });

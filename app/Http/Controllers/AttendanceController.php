@@ -104,6 +104,66 @@ class AttendanceController extends Controller
         ]);
     }
 
+    public function events(Request $request)
+    {
+        $student = $request->user()->student;
+        if (! $student) {
+            abort(403, 'Mahasiswa tidak ditemukan.');
+        }
+
+        $records = Attendance::where('student_id', $student->id)
+            ->orderByDesc('date')
+            ->limit(120)
+            ->get();
+
+        $statusLabels = [
+            Attendance::STATUS_PRESENT => 'Hadir',
+            Attendance::STATUS_LATE => 'Terlambat',
+            Attendance::STATUS_ABSENT => 'Tidak Hadir',
+        ];
+
+        $events = $records->map(function (Attendance $record) use ($statusLabels) {
+            $checkIn = $record->check_in_at ? $record->check_in_at->timezone(config('app.timezone')) : null;
+            $checkOut = $record->check_out_at ? $record->check_out_at->timezone(config('app.timezone')) : null;
+
+            $status = $record->status;
+            $statusText = $statusLabels[$status] ?? ucfirst($status);
+
+            $jamMasuk = $checkIn ? $checkIn->format('H.i') . ' WIB' : '-';
+            $jamPulang = $checkOut ? $checkOut->format('H.i') . ' WIB' : '-';
+
+            $title = $statusText;
+            if ($status !== Attendance::STATUS_ABSENT) {
+                $title .= ' (' . ($jamMasuk !== '-' ? $jamMasuk : '?') . ' - ' . ($jamPulang !== '-' ? $jamPulang : '?') . ')';
+            }
+
+            $start = $checkIn ? $checkIn->toIso8601String() : $record->date->toDateString();
+            $end = $checkOut ? $checkOut->toIso8601String() : null;
+
+            $classNames = match ($status) {
+                Attendance::STATUS_LATE => ['fc-status-late'],
+                Attendance::STATUS_ABSENT => ['fc-status-absent'],
+                default => ['fc-status-present'],
+            };
+
+            return [
+                'title' => $title,
+                'start' => $start,
+                'end' => $end,
+                'allDay' => ! $checkIn,
+                'classNames' => $classNames,
+                'extendedProps' => [
+                    'status' => $status,
+                    'status_label' => $statusText,
+                    'jam_masuk' => $jamMasuk,
+                    'jam_pulang' => $jamPulang,
+                ],
+            ];
+        });
+
+        return response()->json($events);
+    }
+
     protected function ensureActiveStudent($student): void
     {
         if (! $student || $student->status !== 'active') {

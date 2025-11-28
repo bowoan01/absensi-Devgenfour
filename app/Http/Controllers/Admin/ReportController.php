@@ -8,6 +8,7 @@ use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Yajra\DataTables\Facades\DataTables;
 
 class ReportController extends Controller
 {
@@ -15,19 +16,9 @@ class ReportController extends Controller
     {
         $students = Student::orderBy('full_name')->get();
         $filters = $this->extractFilters($request);
-        [$records, $summary] = $this->queryAttendance($filters);
-
-        if ($request->ajax()) {
-            return response()->json([
-                'html' => view('partials.reports.table', ['records' => $records, 'summary' => $summary])->render(),
-                'summary' => $summary,
-            ]);
-        }
 
         return view('admin.reports.index', [
             'students' => $students,
-            'records' => $records,
-            'summary' => $summary,
             'filters' => $filters,
         ]);
     }
@@ -38,21 +29,10 @@ class ReportController extends Controller
         $filters = $this->extractFilters($request);
         $filters['student_id'] = $student->id;
 
-        [$records, $summary] = $this->queryAttendance($filters);
-
-        if ($request->ajax()) {
-            return response()->json([
-                'html' => view('partials.reports.table', ['records' => $records, 'summary' => $summary])->render(),
-                'summary' => $summary,
-            ]);
-        }
-
-        return view('admin.reports.show', [
+        return view('admin.reports.index', [
             'students' => $students,
-            'student' => $student,
-            'records' => $records,
-            'summary' => $summary,
             'filters' => $filters,
+            'selectedStudent' => $student,
         ]);
     }
 
@@ -89,6 +69,67 @@ class ReportController extends Controller
         // Log::info('Report exported', ['user' => auth()->id(), 'student' => $student->id]);
 
         return $response;
+    }
+
+    public function datatable(Request $request)
+    {
+        $filters = $this->extractFilters($request);
+
+        $baseQuery = Attendance::query()
+            ->select('attendance.*')
+            ->with('student')
+            ->leftJoin('students', 'students.id', '=', 'attendance.student_id')
+            ->when($filters['student_id'], fn($q) => $q->where('attendance.student_id', $filters['student_id']))
+            ->forDateRange($filters['start_date'], $filters['end_date'])
+            ->when($filters['status'], fn($q) => $q->where('attendance.status', $filters['status']))
+            ->orderByDesc('attendance.date');
+
+        $summaryQuery = clone $baseQuery;
+        $summary = [
+            'present' => (clone $summaryQuery)->where('attendance.status', Attendance::STATUS_PRESENT)->count(),
+            'late' => (clone $summaryQuery)->where('attendance.status', Attendance::STATUS_LATE)->count(),
+            'absent' => (clone $summaryQuery)->where('attendance.status', Attendance::STATUS_ABSENT)->count(),
+        ];
+
+        $statusLabels = [
+            Attendance::STATUS_PRESENT => 'Hadir',
+            Attendance::STATUS_LATE => 'Terlambat',
+            Attendance::STATUS_ABSENT => 'Tidak Hadir',
+        ];
+
+        return DataTables::eloquent($baseQuery)
+            ->addColumn('nama_mahasiswa', fn(Attendance $record) => optional($record->student)->full_name ?? '-')
+            ->addColumn('tanggal', function (Attendance $record) {
+                return $record->date ? $record->date->locale('id')->translatedFormat('d F Y') : '-';
+            })
+            ->addColumn('check_in', function (Attendance $record) {
+                $checkIn = $record->check_in_at ? $record->check_in_at->timezone(config('app.timezone')) : null;
+                return $checkIn ? $checkIn->format('H.i') . ' WIB' : '—';
+            })
+            ->addColumn('check_out', function (Attendance $record) {
+                $checkOut = $record->check_out_at ? $record->check_out_at->timezone(config('app.timezone')) : null;
+                return $checkOut ? $checkOut->format('H.i') . ' WIB' : '—';
+            })
+            ->addColumn('status_label', function (Attendance $record) use ($statusLabels) {
+                $badge = $record->status === Attendance::STATUS_LATE ? 'warning text-dark' : ($record->status === Attendance::STATUS_ABSENT ? 'secondary' : 'success');
+                $label = $statusLabels[$record->status] ?? 'Tidak diketahui';
+                return '<span class="badge bg-' . $badge . '">' . $label . '</span>';
+            })
+            ->addColumn('catatan', fn(Attendance $record) => e($record->note ?: '—'))
+            ->addColumn('aksi', function (Attendance $record) {
+                $checkIn = $record->check_in_at ? $record->check_in_at->timezone(config('app.timezone'))->format('Y-m-d\TH:i') : '';
+                $checkOut = $record->check_out_at ? $record->check_out_at->timezone(config('app.timezone'))->format('Y-m-d\TH:i') : '';
+                $note = e($record->note ?? '');
+
+                return '<button type="button" class="btn btn-outline-secondary btn-sm btn-raise edit-attendance" data-id="' . $record->id . '" data-checkin="' . $checkIn . '" data-checkout="' . $checkOut . '" data-status="' . $record->status . '" data-note="' . $note . '">Ubah</button>';
+            })
+            ->filterColumn('nama_mahasiswa', function ($query, $keyword) {
+                $query->where('students.full_name', 'like', '%' . $keyword . '%');
+            })
+            ->orderColumn('nama_mahasiswa', 'students.full_name $1')
+            ->rawColumns(['status_label', 'aksi'])
+            ->with('summary', $summary)
+            ->toJson();
     }
 
     public function updateAttendance(Request $request, Attendance $attendance)

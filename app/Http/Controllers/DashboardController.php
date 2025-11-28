@@ -36,7 +36,7 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        Log::info('Dashboard viewed', ['user' => auth()->id()]);
+        // Log::info('Dashboard viewed', ['user' => auth()->id()]);
 
         return view('admin.dashboard', compact('stats', 'recent', 'today'));
     }

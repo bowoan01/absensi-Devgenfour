@@ -40,6 +40,12 @@
         </div>
     </div>
 </div>
+<h5 class="fw-bold mb-2">Absensi Terbaru</h5>
+<div class="card shadow-sm border-0 card-hover mb-3">
+    <div class="card-body">
+        <div id="calendar"></div>
+    </div>
+</div>
 <h5 class="fw-bold mb-2">Riwayat Absensi</h5>
 <div id="attendance-history">
     @include('partials.attendance.history', ['history' => $history])
@@ -50,6 +56,40 @@
 <script>
 $(function() {
     startWibClock('#clock', { showSeconds: true });
+
+    const calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'id',
+            height: 'auto',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek'
+            },
+            events: "{{ route('attendance.events') }}",
+            eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+            eventClassNames: function(arg) {
+                return arg.event.extendedProps.status ? ['fc-status-' + arg.event.extendedProps.status] : [];
+            },
+            eventDidMount: function(info) {
+                const props = info.event.extendedProps;
+                const detail = `
+                    <div><strong>${props.status_label || info.event.title}</strong></div>
+                    <div>Masuk: ${props.jam_masuk || '-'}</div>
+                    <div>Pulang: ${props.jam_pulang || '-'}</div>
+                `;
+                new bootstrap.Tooltip(info.el, {
+                    title: detail,
+                    html: true,
+                    trigger: 'hover',
+                    container: 'body',
+                });
+            }
+        });
+        calendar.render();
+    }
 
     function handleAction(url) {
         $.post(url, { note: $('#attendance-note').val(), _token: $('meta[name="csrf-token"]').attr('content') })
@@ -70,4 +110,24 @@ $(function() {
     $('#checkout-btn').on('click', function() { handleAction('/attendance/checkout'); });
 });
 </script>
+<style>
+#calendar .fc-status-present {
+    background-color: #198754;
+    border-color: #198754;
+    color: #fff;
+}
+#calendar .fc-status-late {
+    background-color: #ffc107;
+    border-color: #e0a800;
+    color: #212529;
+}
+#calendar .fc-status-absent {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+}
+#calendar .fc-event {
+    cursor: pointer;
+}
+</style>
 @endpush
